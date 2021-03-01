@@ -40,6 +40,7 @@ func generate_cell_nodes():
 		var position = cell_index_to_coordinate(i) * cell_size
 		node.translate(position)
 		node.scale = Vector3(cell_size * 0.1, cell_size * 0.1, cell_size * 0.1)
+		node.set_color(Color.green)
 		add_child(node)
 
 #TODO Make this function actually work. Or, generally, figure out how the cubes are actually being displayed.
