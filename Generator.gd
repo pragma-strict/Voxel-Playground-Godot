@@ -7,6 +7,7 @@ var RNG = RandomNumberGenerator.new()
 export var cell_size = 1
 export var chunk_width = 16
 export var chunk_height = 4
+export(PackedScene) var cell_scene
 
 var stride_x
 var stride_y
@@ -27,8 +28,6 @@ func _input(event):
 		generate_cells()
 		generate_cell_nodes()
 		b_generated = true
-	if(Input.is_key_pressed(KEY_A)):
-		print_tree_pretty()
 
 func generate_cells():
 	for i in range(chunk_width * chunk_width * chunk_height):
@@ -37,13 +36,11 @@ func generate_cells():
 
 func generate_cell_nodes():
 	for i in range(len(cells)):
-		var node = MeshInstance.new()
-		node.mesh = CubeMesh.new()
+		var node = cell_scene.instance()
 		var position = cell_index_to_coordinate(i) * cell_size
 		node.translate(position)
 		node.scale = Vector3(cell_size * 0.1, cell_size * 0.1, cell_size * 0.1)
 		add_child(node)
-		print("Created cube mesh at: ", position)
 
 #TODO Make this function actually work. Or, generally, figure out how the cubes are actually being displayed.
 func cell_index_to_coordinate(index:int):
