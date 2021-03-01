@@ -3,7 +3,7 @@ extends MeshInstance
 var color
 
 func _ready():
-	pass
+	mesh = CubeMesh.new()
 
 func set_color(new_col):
 	color = new_col
