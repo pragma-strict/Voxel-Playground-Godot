@@ -1,6 +1,7 @@
 extends MeshInstance
 
 var color
+var property = 0.0
 
 func _ready():
 	mesh = CubeMesh.new()
