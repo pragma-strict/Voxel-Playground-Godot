@@ -11,6 +11,7 @@ export var cell_size = 1.0
 export var chunk_width = 16
 export var chunk_height = 4
 export(PackedScene) var cell_scene
+export var processes_per_frame = 16
 
 var stride_x
 var stride_y
@@ -45,8 +46,10 @@ func _physics_process(delta):
 
 
 func simulation_step(delta):
-	for i in range(10):
-		kernel_average_single(RNG.randi_range(0, len(cells) -1))
+	for i in range(processes_per_frame):
+		var index = RNG.randi_range(0, len(cells) -1)
+		kernel_average_single(index)
+		kernel_conway_single(index)
 
 
 # Create the kernel of index offsets
@@ -149,43 +152,28 @@ func generate_cells():
 func new_cell(index:int):
 	var value = randf()
 	var color = Color(value, value, value)
+	var is_alive = false
+	if (randf() > 0.9):
+		is_alive = true
 	var cell = {
 		'type' : 0,
+		'alive': is_alive,
 		'value' : value,
-		'node' : generate_cell_node(index, color)
+		'node' : generate_cell_node(index, color, is_alive)
 	}
 	return cell
 
 
-# Add cells to the scene tree
-func generate_cell_nodes():
-	for i in range(len(cells)):
-		var node = cell_scene.instance()
-		var position = cell_index_to_coordinate(i) * cell_size
-		node.translate(position)
-		node.scale = Vector3(cell_size * 0.5, cell_size * 0.5, cell_size * 0.5)
-		add_child(node)
-		var cell_value = cells[i]['value']
-		var cell_color = Color(cell_value, cell_value, cell_value)
-		node.set_color(cell_color)
-		cell_nodes.append(node)
-
-
 # Create and return a cell node. Also adds it to the scene tree.
-func generate_cell_node(index:int, color:Color):
+func generate_cell_node(index:int, color:Color, is_alive:bool):
 	var node = cell_scene.instance()
 	var position = cell_index_to_coordinate(index) * cell_size
 	node.translate(position)
 	node.scale = Vector3(cell_size * 0.5, cell_size * 0.5, cell_size * 0.5)
 	add_child(node)
 	node.set_color(color)
+	node.set_alive(is_alive)
 	return node
-
-
-# Randomize colors of existing cells
-func randomize_cell_colors():
-	for cell in cells:
-		cell['node'].set_color(Color(RNG.randf(), RNG.randf(), RNG.randf()))
 
 
 # Set cell colors according to values
@@ -197,6 +185,12 @@ func update_cell_colors():
 func update_cell_color(index:int):
 	var value = cells[index]['value']
 	cells[index]['node'].set_color(Color(value, value, value))
+
+
+func update_cell(index:int):
+	#var value = cells[index]['value']
+	#cells[index]['node'].set_color(Color(value, value, value))
+	cells[index]['node'].set_alive(cells[index]['alive'])
 
 
 # Average the values in each cell with neighboring cells
@@ -224,6 +218,21 @@ func kernel_average_single(index:int):
 	var value = (cells[index]['value'] + sum / cells_in_kernel) /2
 	cells[index]['value'] = value
 	update_cell_color(index)
+
+
+# Perform a conway-style kernel operation
+func kernel_conway_single(index:int):
+	var living_neighbors = 0
+	for k in range(len(index_offset_kernel)):
+		var offset_index = index + index_offset_kernel[k]
+		if offset_index >= 0 and offset_index < len(cells):
+			if cells[offset_index]['alive']:
+				living_neighbors += 1
+	if (living_neighbors >= 8) or (living_neighbors <= 3):
+		cells[index]['alive'] = false
+	else:
+		cells[index]['alive'] = true
+	update_cell(index)
 
 
 func get_index_adjacent_to(origin:int, direction:Vector3):

@@ -6,8 +6,8 @@
 
 [node name="Spatial" type="Spatial"]
 script = ExtResource( 1 )
-cell_size = 0.25
-chunk_width = 32
+cell_size = 0.5
+chunk_height = 16
 cell_scene = ExtResource( 3 )
 
 [node name="Camera" type="Camera" parent="."]
