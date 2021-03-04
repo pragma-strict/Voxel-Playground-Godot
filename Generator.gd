@@ -22,19 +22,32 @@ var cells = [] # [x][y][z]
 var cell_nodes = [] # Node refs
 var b_generated = false
 
+
 func _ready():
 	RNG.randomize()
 	stride_x = chunk_width * chunk_height
 	stride_y = chunk_height
 	stride_z = 1
 	init_offset_kernel()
+	generate_cells()
+	b_generated = true
+
 
 func _input(event):
 	if(Input.is_key_pressed(KEY_SPACE) and !b_generated):
-		generate_cells()
-		b_generated = true
+		pass
 	if(Input.is_key_pressed(KEY_C)):
-		kernel_diffuse()
+		pass
+
+
+func _physics_process(delta):
+	simulation_step(delta)
+
+
+func simulation_step(delta):
+	for i in range(10):
+		kernel_average_single(RNG.randi_range(0, len(cells) -1))
+
 
 # Create the kernel of index offsets
 func init_offset_kernel():
@@ -67,6 +80,7 @@ func init_offset_kernel():
 		cell_coordinate_to_index(Vector3(1, 1, 0)),
 		cell_coordinate_to_index(Vector3(1, 1, 1))
 	]
+
 
 # Create the kernel of index offsets as a nested array
 func init_offset_kernel_nested():
@@ -124,10 +138,12 @@ func init_offset_kernel_nested():
 		]
 	]
 
+
 # Create and initialize all cells
 func generate_cells():
 	for i in range(chunk_width * chunk_width * chunk_height):
 		cells.append(new_cell(i))
+
 
 # Produce data for a single cell
 func new_cell(index:int):
@@ -139,6 +155,7 @@ func new_cell(index:int):
 		'node' : generate_cell_node(index, color)
 	}
 	return cell
+
 
 # Add cells to the scene tree
 func generate_cell_nodes():
@@ -153,6 +170,7 @@ func generate_cell_nodes():
 		node.set_color(cell_color)
 		cell_nodes.append(node)
 
+
 # Create and return a cell node. Also adds it to the scene tree.
 func generate_cell_node(index:int, color:Color):
 	var node = cell_scene.instance()
@@ -163,18 +181,26 @@ func generate_cell_node(index:int, color:Color):
 	node.set_color(color)
 	return node
 
+
 # Randomize colors of existing cells
 func randomize_cell_colors():
 	for cell in cells:
 		cell['node'].set_color(Color(RNG.randf(), RNG.randf(), RNG.randf()))
+
 
 # Set cell colors according to values
 func update_cell_colors():
 	for cell in cells:
 		cell['node'].set_color(Color(cell['value'], cell['value'], cell['value']))
 
+
+func update_cell_color(index:int):
+	var value = cells[index]['value']
+	cells[index]['node'].set_color(Color(value, value, value))
+
+
 # Average the values in each cell with neighboring cells
-func kernel_diffuse():
+func kernel_average_all():
 	for i in range(len(cells)):
 		var sum = 0
 		var cells_in_kernel = 0
@@ -185,6 +211,20 @@ func kernel_diffuse():
 				sum += cells[offset_index]['value']
 		cells[i]['value'] = sum / cells_in_kernel
 	update_cell_colors()
+
+
+func kernel_average_single(index:int):
+	var sum = 0
+	var cells_in_kernel = 0
+	for k in range(len(index_offset_kernel)):
+		var offset_index = index + index_offset_kernel[k]
+		if offset_index >= 0 and offset_index < len(cells):
+			cells_in_kernel += 1
+			sum += cells[offset_index]['value']
+	var value = (cells[index]['value'] + sum / cells_in_kernel) /2
+	cells[index]['value'] = value
+	update_cell_color(index)
+
 
 func get_index_adjacent_to(origin:int, direction:Vector3):
 	var coordinate = cell_index_to_coordinate(origin)
@@ -225,6 +265,7 @@ func get_index_adjacent_to(origin:int, direction:Vector3):
 		else:
 			return cell_coordinate_to_index(Vector3(coordinate.x, coordinate.y, 0))
 
+
 # Return the Vector3 coordinate of the cell at a given index
 func cell_index_to_coordinate(index:int):
 	var coordinate = Vector3()
@@ -232,6 +273,7 @@ func cell_index_to_coordinate(index:int):
 	coordinate.y = int(floor(index / chunk_width)) % chunk_height
 	coordinate.z = index % chunk_width
 	return coordinate
+
 
 # Return the index of the cell at a given coordinate
 func cell_coordinate_to_index(coordinate:Vector3):
